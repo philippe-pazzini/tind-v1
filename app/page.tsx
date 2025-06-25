@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -94,6 +96,12 @@ export default function SigiloX() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showSalesProof, setShowSalesProof] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [uploadedPhoto, setUploadedPhoto] = useState<string | null>(null)
+  const [ageRange, setAgeRange] = useState("")
+  const [userEmail, setUserEmail] = useState("")
+  const [isSubmittingEmail, setIsSubmittingEmail] = useState(false)
+  const [emailSubmitted, setEmailSubmitted] = useState(false)
+  const [generatedProfiles, setGeneratedProfiles] = useState<any[]>([])
 
   const [selectedCountry, setSelectedCountry] = useState({
     code: "+1",
@@ -470,7 +478,82 @@ export default function SigiloX() {
     }
   }, [currentStep])
 
-  const canVerify = phoneNumber.length >= 10 && selectedGender && profilePhoto && lastTinderUse && cityChange
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setUploadedPhoto(e.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Fake name generation logic
+  const generateFakeProfiles = () => {
+    // If profiles already exist, return them
+    if (generatedProfiles.length > 0) {
+      return generatedProfiles
+    }
+
+    const maleNames = {
+      "18-24": ["Jacob", "Michael", "Joshua", "Matthew", "Daniel", "Christopher", "Andrew", "Joseph", "Ethan"],
+      "25-34": ["Justin", "Brandon", "Ryan", "Zachary", "Tyler", "Austin", "Cody", "Kyle", "Nathan"],
+      "35-44": ["Jason", "Jeremy", "Brian", "Eric", "Jeffrey", "Travis", "Adam", "Shawn", "Aaron"],
+      "45-54": ["Scott", "Todd", "Gregory", "Mark", "Kevin", "Steven", "Paul", "Chad", "Dennis"],
+    }
+
+    const femaleNames = {
+      "18-24": ["Emma", "Olivia", "Sophia", "Ava", "Mia", "Abigail", "Emily", "Madison", "Isabella"],
+      "25-34": ["Emily", "Jessica", "Sarah", "Ashley", "Amanda", "Brittany", "Samantha", "Taylor", "Lauren"],
+      "35-44": ["Tiffany", "Crystal", "Erin", "Katie", "Tara", "Stacy", "Kelsey", "Carrie", "Monica"],
+      "45-54": ["Tracy", "Shannon", "Kelly", "Wendy", "Denise", "Tammy", "Rhonda", "Lori", "Tonya"],
+    }
+
+    const profiles = []
+
+    for (let i = 0; i < 3; i++) {
+      let names, targetGender, targetAge
+
+      if (selectedGender === "nao-binario") {
+        // Random selection for non-binary
+        const genders = ["masculino", "feminino"]
+        targetGender = genders[Math.floor(Math.random() * genders.length)]
+        const ages = ["18-24", "25-34", "35-44", "45-54"]
+        targetAge = ages[Math.floor(Math.random() * ages.length)]
+      } else {
+        // Opposite gender for binary selections
+        targetGender = selectedGender === "masculino" ? "feminino" : "masculino"
+        targetAge = ageRange
+      }
+
+      names = targetGender === "masculino" ? maleNames[targetAge] : femaleNames[targetAge]
+      const name = names[Math.floor(Math.random() * names.length)]
+      const age = Math.floor(Math.random() * 7) + Number.parseInt(targetAge.split("-")[0])
+
+      profiles.push({
+        name,
+        age,
+        lastSeen: `${Math.floor(Math.random() * 24)}h ago`,
+        description: "Active user, frequently online",
+        image: `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 100000000)}?w=400&h=400&fit=crop&crop=face`,
+      })
+    }
+
+    // Store the generated profiles in state
+    setGeneratedProfiles(profiles)
+    return profiles
+  }
+
+  // Generate fake profiles when reaching result step
+  useEffect(() => {
+    if (currentStep === "result" && generatedProfiles.length === 0) {
+      generateFakeProfiles()
+    }
+  }, [currentStep])
+
+  const canVerify =
+    phoneNumber.length >= 10 && selectedGender && profilePhoto && lastTinderUse && cityChange && ageRange
 
   return (
     <div className="min-h-screen" style={{ fontFamily: "Inter, -apple-system, BlinkMacSystemFont, sans-serif" }}>
@@ -873,7 +956,44 @@ export default function SigiloX() {
                   {/* Form */}
                   <Card className="bg-white rounded-2xl shadow-lg border-0">
                     <CardContent className="p-4 sm:p-8 space-y-6 sm:space-y-8">
-                      {/* Phone Number */}
+                      {/* Photo Upload - Moved to first position */}
+                      <div>
+                        <label className="block text-sm sm:text-base font-semibold text-[#333333] mb-3 sm:mb-4">
+                          Upload a photo for facial verification
+                        </label>
+                        <div className="text-center">
+                          {uploadedPhoto ? (
+                            <div className="relative inline-block">
+                              <img
+                                src={uploadedPhoto || "/placeholder.svg"}
+                                alt="Uploaded"
+                                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-4 border-blue-500 shadow-lg"
+                              />
+                              <button
+                                onClick={() => setUploadedPhoto(null)}
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="w-24 h-24 sm:w-28 sm:h-28 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center mx-auto cursor-pointer hover:border-blue-500 transition-colors">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handlePhotoUpload}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                              <Camera className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-3 font-medium">
+                          Your image is processed only for visual verification and is never stored.
+                        </p>
+                      </div>
+
+                      {/* Phone Number - Now second */}
                       <div>
                         <label className="block text-sm sm:text-base font-semibold text-[#333333] mb-2 sm:mb-3">
                           WhatsApp Number
@@ -1085,9 +1205,76 @@ export default function SigiloX() {
                         </div>
                       </div>
 
+                      {/* Age Range Selection */}
+                      <div>
+                        <label className="block text-sm sm:text-base font-semibold text-[#333333] mb-3 sm:mb-4">
+                          Age range of the person being checked:
+                        </label>
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                          {[
+                            { id: "18-24", label: "18-24" },
+                            { id: "25-34", label: "25-34" },
+                            { id: "35-44", label: "35-44" },
+                            { id: "45-54", label: "45-54" },
+                          ].map((option) => (
+                            <button
+                              key={option.id}
+                              onClick={() => setAgeRange(option.id)}
+                              className={`p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-lg touch-manipulation ${
+                                ageRange === option.id
+                                  ? "border-purple-500 bg-purple-50 shadow-lg"
+                                  : "border-gray-200 hover:border-gray-300 bg-white"
+                              }`}
+                            >
+                              <div className="font-semibold text-sm sm:text-base">{option.label}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Photo Upload */}
+                      {/* <div>
+                        <label className="block text-sm sm:text-base font-semibold text-[#333333] mb-3 sm:mb-4">
+                          Upload a photo for facial verification (optional)
+                        </label>
+                        <div className="text-center">
+                          {uploadedPhoto ? (
+                            <div className="relative inline-block">
+                              <img
+                                src={uploadedPhoto || "/placeholder.svg"}
+                                alt="Uploaded"
+                                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-4 border-blue-500 shadow-lg"
+                              />
+                              <button
+                                onClick={() => setUploadedPhoto(null)}
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="w-24 h-24 sm:w-28 sm:h-28 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center mx-auto cursor-pointer hover:border-blue-500 transition-colors">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handlePhotoUpload}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                              <Camera className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-3 font-medium">
+                          Your image is processed only for visual verification and is never stored.
+                        </p>
+                      </div> */}
+
                       {/* Submit Button */}
                       <Button
-                        onClick={() => setCurrentStep("verification")}
+                        onClick={() => {
+                          setCurrentStep("verification")
+                          setGeneratedProfiles([]) // Reset profiles for new search
+                        }}
                         disabled={!canVerify}
                         className={`w-full py-3 sm:py-4 text-base sm:text-lg font-bold rounded-xl transition-all duration-300 touch-manipulation ${
                           canVerify
@@ -1368,6 +1555,13 @@ export default function SigiloX() {
                   role="alert"
                 >
                   <div className="flex items-center gap-2 sm:gap-3">
+                    {uploadedPhoto && (
+                      <img
+                        src={uploadedPhoto || "/placeholder.svg"}
+                        alt="Uploaded verification"
+                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border-2 border-white shadow-lg flex-shrink-0"
+                      />
+                    )}
                     <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse flex-shrink-0" />
                     <div>
                       <strong className="font-bold text-base sm:text-lg">PROFILE FOUND!</strong>
@@ -1513,58 +1707,103 @@ export default function SigiloX() {
                   </Card>
                 </div>
 
-                {/* Activity */}
+                {/* Fake Profiles Section */}
                 <Card className="mb-4 sm:mb-6 rounded-2xl border-0 shadow-lg">
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                       <Heart className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF0066] flex-shrink-0" />
-                      <span className="font-bold text-base sm:text-lg text-[#333333]">RECENT ACTIVITY</span>
+                      <span className="font-bold text-base sm:text-lg text-[#333333]">RECENT MATCHES FOUND</span>
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 p-3 bg-pink-50 rounded-2xl border border-pink-200">
-                        <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-[#FF0066] flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm text-[#333333]">Matched with 6 people</div>
-                          <div className="text-xs text-gray-600">Last 7 days • Very active</div>
+                    <div className="space-y-4">
+                      {generateFakeProfiles().map((profile, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 p-3 bg-pink-50 rounded-2xl border border-pink-200"
+                        >
+                          <div className="relative">
+                            <img
+                              src={profile.image || "/placeholder.svg"}
+                              alt={`Profile ${index + 1}`}
+                              className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover"
+                              style={{ filter: "blur(8px)" }}
+                              onError={(e) => {
+                                e.currentTarget.src =
+                                  "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face"
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-30 rounded-xl flex items-center justify-center">
+                              <Lock className="w-4 h-4 text-white" />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-sm text-[#333333]">
+                              {profile.name}, {profile.age}
+                            </div>
+                            <div className="text-xs text-gray-600">Last seen: {profile.lastSeen}</div>
+                            <div className="text-xs text-gray-500 mt-1">{profile.description}</div>
+                          </div>
+                          <span className="bg-[#FF3B30] text-white text-[0.6rem] px-2 py-1 rounded-full font-bold flex-shrink-0">
+                            MATCH
+                          </span>
                         </div>
-                        <span className="bg-[#FF3B30] text-white text-[0.6rem] px-2 py-1 rounded-full font-bold flex-shrink-0">
-                          NEW
-                        </span>
-                      </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                      <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-2xl border border-orange-200">
-                        <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFA500] flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm text-[#333333]">Received 30 likes</div>
-                          <div className="text-xs text-gray-600">Last 7 days • Very popular profile</div>
-                        </div>
-                        <span className="bg-[#FFA500] text-white text-[0.6rem] px-2 py-1 rounded-full font-bold flex-shrink-0">
-                          ACTIVE
-                        </span>
-                      </div>
+                {/* Email Capture Section */}
+                <Card className="mb-4 sm:mb-6 rounded-2xl border-2 border-blue-500 shadow-xl">
+                  <CardContent className="p-4 sm:p-6 text-center">
+                    <h3 className="text-lg sm:text-xl font-bold text-[#333333] mb-3">🔓 UNLOCK COMPLETE REPORT</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Enter your email to unlock the full report with uncensored photos and complete conversation
+                      history.
+                    </p>
 
-                      <div className="flex items-center gap-3 p-3 bg-red-50 rounded-2xl border border-red-200">
-                        <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-[#D8000C] flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm text-[#333333]">Used Tinder in a new location</div>
-                          <div className="text-xs text-gray-600">Today at 7:35 PM • Suspicious!</div>
-                        </div>
-                        <span className="bg-[#D8000C] text-white text-[0.6rem] px-2 py-1 rounded-full font-bold flex-shrink-0">
-                          ALERT
-                        </span>
-                      </div>
+                    <div className="space-y-4">
+                      <Input
+                        type="email"
+                        placeholder="Enter your email address"
+                        value={userEmail}
+                        onChange={(e) => setUserEmail(e.target.value)}
+                        className="rounded-xl border-2 border-gray-200 focus:border-[#6C63FF] transition-colors duration-200 py-2 sm:py-3 px-3 sm:px-4 text-sm sm:text-base"
+                      />
+                      <Button
+                        onClick={async () => {
+                          if (!userEmail || !userEmail.includes("@")) return
 
-                      <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-2xl border border-purple-200">
-                        <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm text-[#333333]">Sent 15 messages</div>
-                          <div className="text-xs text-gray-600">Today • Actively chatting</div>
-                        </div>
-                        <span className="bg-purple-500 text-white text-[0.6rem] px-2 py-1 rounded-full font-bold flex-shrink-0">
-                          TODAY
-                        </span>
-                      </div>
+                          setIsSubmittingEmail(true)
+                          try {
+                            await fetch(
+                              "https://get.emailserverside.com/webhook/f8fdd459bd78e07f21b57367b7fb22616708a456ffd0d659da0ffedc32860ae7",
+                              {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                  tag: "tinder check en - usuario criado",
+                                  evento: "Usuário Criado",
+                                  email: userEmail,
+                                }),
+                              },
+                            )
+                            // Redirect directly to offer step
+                            setCurrentStep("offer")
+                          } catch (error) {
+                            console.error("Error submitting email:", error)
+                            // Even if there's an error, redirect to offer step
+                            setCurrentStep("offer")
+                          } finally {
+                            setIsSubmittingEmail(false)
+                          }
+                        }}
+                        disabled={!userEmail || !userEmail.includes("@") || isSubmittingEmail}
+                        className="w-full bg-gradient-to-r from-[#FF0066] to-[#FF3333] hover:from-[#FF0066] hover:to-[#FF3333] text-white font-bold py-3 sm:py-4 px-6 sm:px-8 text-base sm:text-lg rounded-xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 touch-manipulation"
+                      >
+                        {isSubmittingEmail ? "PROCESSING..." : "🔓 UNLOCK REPORT NOW"}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
