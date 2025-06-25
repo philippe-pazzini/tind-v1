@@ -1559,7 +1559,7 @@ export default function SigiloX() {
                       <img
                         src={uploadedPhoto || "/placeholder.svg"}
                         alt="Uploaded verification"
-                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover border-2 border-white shadow-lg flex-shrink-0"
+                        className="w-10 h-10 sm:w-12 sm:w-12 rounded-xl object-cover border-2 border-white shadow-lg flex-shrink-0"
                       />
                     )}
                     <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse flex-shrink-0" />
@@ -1807,23 +1807,6 @@ export default function SigiloX() {
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* CTA - Offer */}
-                <div className="text-center">
-                  <h3 className="text-lg sm:text-xl font-bold text-[#333333] mb-2 sm:mb-3">
-                    UNLOCK THE COMPLETE REPORT
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4 sm:mb-6">
-                    See photos, conversations and exact location of the profile.
-                  </p>
-                  <Button
-                    onClick={() => setCurrentStep("offer")}
-                    className="bg-gradient-to-r from-[#FF0066] to-[#FF3333] hover:from-[#FF0066] hover:to-[#FF3333] text-white font-bold py-3 sm:py-4 px-6 sm:px-8 text-base sm:text-lg rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 w-full touch-manipulation"
-                  >
-                    🔓 UNLOCK REPORT NOW
-                  </Button>
-                  <p className="text-xs text-gray-500 mt-4 font-medium">Limited time offer only.</p>
-                </div>
               </div>
             </motion.div>
           )}
